@@ -28,7 +28,12 @@ Modifications were done mostly to return functionality to scripts that had probl
 3. 8-phaseHap.pl 
  * updated command for picard (now the only executable is picard.jar, *AddOrReplaceReadGroups* and *CreateSequenceDictionary* are options)
 
+4. 9-hapTools.py
+ * corrected a bug that resulted in consensus being saved in the wrong folder and inability to delete temporary files
 
+Also, a new script was written to rename samples in alignment and tree files. See ** 10-addTaxonNames.R **
+
+This fork is a work in progress and scripts that I did not use will eventually be deleted (mainly those related to read cleaning and assembly)
 
 ****************************************************************
 1-pre-cleanup.pl: Reformats raw sequencing reads from Illumina for 2-scrubReads.pl
@@ -212,3 +217,12 @@ Output:
 <br>LOC2.fa
 <br>LOC3.fa
 
+****************************************************************
+10-addTaxonNames.R: replaces taxon names in text files (e. g. tree or alignment files). It can either replace names or append them.
+Usage:
+`Rscript 10-addTaxonNames.R -h` for help
+
+Input:
+
+* files in which names should be replaced
+* a table in xlsx or csv format, containg a column named *genomics* with sample ids and another names *taxon* with corresponding taxon names. Spaces in names will be replaced by underscores and dots will be removed.
