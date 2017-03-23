@@ -9,6 +9,27 @@ Pipeline is a constant work in progress. Contact Josh for python scripts and Ke 
 
 This pipeline is a combination of novel scripts and scripts from other pipelines http://www.github.com/MVZSEQ/transcriptome and http://www.github.com/singhal/exomeCapture.
 
+
+## Fork information
+
+Bruno de Medeiros (souzademedeiros@fas.harvard.edu) forked this repository on 23 Mar 2017 to use some scripts for his SCPP experiment. 
+Modifications were done mostly to return functionality to scripts that had problems with newer versions of dependencies, and to add an appropriate shebang to files so that they could be directly executed in the linux system available at Harvard Odyssey Cluster. Other than the shebang, the following files were modified:
+
+1. 6-generateReferences.py 
+ * corrected bug with name of output directory (was adding a slash even when not needed)
+ * updated command for samtools sort (output now needs to include .bam extension and be provided as -o argument)
+ * updated blast commands to use programs in blast+
+ * blast output parser now ignores commented lines
+ * added argument for user to decide number of threads for blast and bowtie
+
+2. 7-alignment.py
+ * updated command for samtools sort (output now needs to include .bam extension and be provided as -o argument)
+ 
+3. 8-phaseHap.pl 
+ * updated command for picard (now the only executable is picard.jar, *AddOrReplaceReadGroups* and *CreateSequenceDictionary* are options)
+
+
+
 ****************************************************************
 1-pre-cleanup.pl: Reformats raw sequencing reads from Illumina for 2-scrubReads.pl
 
