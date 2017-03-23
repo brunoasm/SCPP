@@ -1,4 +1,4 @@
-#!/usr/bin/home python
+#!/usr/bin/env python
 
 #############################################################################
 #                                                                           #
@@ -12,6 +12,15 @@
 #                                                                           #
 #  Script written by: Joshua Penalba (joshua.penalba@anu.edu.au)            #   
 #  Written on: 27 Jul 2013                Last modified: 23 Dec 2013        #                                                           
+#                                                                           # 
+#  Script modified by: Bruno de Medeiros (souzademedeiros@fas.harvard.edu)  # 
+#  Modification date: 22 Mar 2017                                           # 
+#  Updates: updated blast commands to use blast+,                           # 
+#           corrected bug with name of output directory                     # 
+#           corrected command for samtools sort                             # 
+#           blast output parser now ignores commented lines                 # 
+#           script was ignoring merged and reads for blast, now counts them # 
+#           added argument for number of threads                            # 
 #                                                                           # 
 #############################################################################
 
@@ -27,14 +36,15 @@ ref.add_argument('-a', dest='assembly', type=str, help='directory of final assem
 ref.add_argument('-o', dest='out', type=str, help='output directory')
 ref.add_argument('-d', dest='readhead', type=str, help='beginning of the read header (ex. @M00384, @HWI, @HS) [@HWI]', default = '@HWI')
 ref.add_argument('-e', dest='evalue', type=str, help='e-value for BLAST search [1e-10]', default = '1e-10')
+ref.add_argument('-t', dest='threads', type=str, help='number of threads', default = '4')
 
 if len(sys.argv) == 1:
     ref.print_help()
     sys.exit(1)
 args = ref.parse_args()
 
-if args.out.endswith('/'): pass
-else: args.out = args.out+'/'
+if args.out.endswith('/'): args.out=args.out.rstrip('/')
+#else: args.out = args.out+'/'
 
 ######################
 # ESTABLISHING PATHS #
@@ -60,7 +70,7 @@ for lib in liblist:
     try: os.mkdir(OutDir)
     except OSError: pass
     os.system('cp %s %s' % (args.ref, args.out))
-    ToTargets = args.out+args.ref.split('/')[-1]
+    ToTargets = args.out+'/'+args.ref.split('/')[-1]
 
 ###################
 # Initial Mapping #
@@ -82,13 +92,13 @@ for lib in liblist:
 
     #os.system("bowtie2 -x %s -1 %s -2 %s -S bowtie1.sam -5 5 -3 5 --very-sensitive-local -k 10 -X 300 -p 4" % (ToTargets, reads1, reads2))
     #os.system("bowtie2 -x %s %s -S bowtie2.sam -5 5 -3 5 --very-sensitive-local -k 10 -p 4" % (ToTargets, readsu))
-    os.system("bowtie2 -x %s -1 %s -2 %s -S %s/bowtie1.sam -5 5 -3 5 --very-sensitive-local -k 10 -X 300 -p 4" % (ToTargets, reads1, reads2, OutDir))
-    os.system("bowtie2 -x %s %s -S %s/bowtie2.sam -5 5 -3 5 --very-sensitive-local -k 10 -p 4" % (ToTargets, readsu, OutDir))
+    os.system("bowtie2 -x %s -1 %s -2 %s -S %s/bowtie1.sam -5 5 -3 5 --very-sensitive-local -k 10 -X 300 -p %s" % (ToTargets, reads1, reads2, OutDir, args.threads))
+    os.system("bowtie2 -x %s %s -S %s/bowtie2.sam -5 5 -3 5 --very-sensitive-local -k 10 -p %s" % (ToTargets, readsu, OutDir, args.threads))
     print 'MAPPING COMPLETE. RUNNING SAMTOOLS FILE CONVERSIONS...'
     os.system("samtools view -bS %s/bowtie1.sam > %s/bowtie1.bam" % (OutDir, OutDir))
     os.system("samtools view -bS %s/bowtie2.sam > %s/bowtie2.bam" % (OutDir, OutDir))
     os.system("samtools merge %s/bowtie.bam %s/bowtie1.bam %s/bowtie2.bam" % (OutDir, OutDir, OutDir))
-    os.system("samtools sort %s/bowtie.bam %s/bowtie.sorted" % (OutDir, OutDir))
+    os.system("samtools sort %s/bowtie.bam -T %s/temp -o %s/bowtie.sorted.bam" % (OutDir, OutDir, OutDir))
     os.system("rm %s/bowtie1.sam %s/bowtie2.sam %s/bowtie.bam %s/bowtie1.bam %s/bowtie2.bam" % (OutDir, OutDir, OutDir, OutDir, OutDir))
     os.system("samtools index %s/bowtie.sorted.bam" % OutDir)
     os.system("samtools view %s/bowtie.sorted.bam > %s/bowtie.sam" % (OutDir, OutDir))
@@ -102,6 +112,8 @@ for lib in liblist:
 
     samfile = open(OutDir+'/bowtie.sam', 'r')
     reads_1 = open(reads1, 'r')
+    reads_u = open(readsu, 'r')
+    reads_2 = open(reads2, 'r')
     readsout = open(OutDir+'/readsout.fa', 'w')
     refloci = open(ToTargets, 'r')
     readlib = {}
@@ -158,29 +170,31 @@ for lib in liblist:
             readlib2[reads] = keys
 
 #Output for BLAST
-    recording = 'OFF'
-    for lines in reads_1:
-        info = lines.strip().split()
-        if info[0].startswith(readhead) and info[0].split('/')[0] in readlib2:
-            readsout.write('>'+readlib2[info[0].split('/')[0]]+'\n')
-            recording = 'ON'
-        elif info[0].startswith('+'): 
-            recording = 'OFF'
-            continue
-        elif recording == 'ON':
-            readsout.write(info[0]+'\n')
-        else: pass
+    for readfile in (reads_1,reads_2,reads_u):
+	recording = 'OFF'
+	for lines in readfile:
+	    info = lines.strip().split()
+	    if info[0].startswith(readhead) and info[0].split('/')[0] in readlib2:
+		readsout.write('>'+readlib2[info[0].split('/')[0]]+'\n')
+		recording = 'ON'
+	    elif info[0].startswith('+'): 
+		recording = 'OFF'
+		continue
+	    elif recording == 'ON':
+		readsout.write(info[0]+'\n')
+	    else: pass
+        readfile.close()
     readsout.close()
-    reads_1.close()
-
+    
 ############################################
 # BLAST mapped reads onto final assemblies #
 ############################################
 
     print ('PARSING READS COMPLETE. BLAST TO FINAL ASSEMBLY...')
 
-    os.system("formatdb -i %s -p F" % (assembly))
-    os.system("blastall -p blastn -d %s -i %s/readsout.fa -a 4 -e %s -m 8 -o %s/blast.out -b 10" % (assembly, OutDir, evalue, OutDir))
+
+    os.system("makeblastdb -in %s -dbtype nucl" % (assembly))
+    os.system("blastn -db %s -query %s/readsout.fa -num_threads %s -evalue %s -outfmt 7 -out %s/blast.out -max_target_seqs 10" % (assembly, OutDir, args.threads, evalue, OutDir))
     os.system("rm %s.*" % (assembly))
 
 #########################################
@@ -196,13 +210,14 @@ for lib in liblist:
 #Library of BLAST hits
     blastlib = {}
     for lines in blastout:
+        if lines.startswith('#'): continue #added by B. Medeiros, something must have changed in blast outputs
         info = lines.strip().split()
         if info[0] not in blastlib:
             blastlib[info[0]] = [info[1]]
         elif info[0] in blastlib:
             blastlib[info[0]].append(info[1])
     blastout.close()
-
+    
 #Set of contighits
     contighits = set()
     for locus in blastlib:
@@ -221,6 +236,7 @@ for lib in liblist:
             recording = 'OFF'
         elif recording == 'ON': contiglib[contigname].append(info[0])
         else: pass
+
     for contig in contiglib:
         if len(contiglib[contig]) == 1: contiglib[contig] = contiglib[contig][0]
         elif len(contiglib[contig]) > 1: contiglib[contig] = ''.join(contiglib[contig])

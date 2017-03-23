@@ -1,4 +1,4 @@
-#!/usr/bin/home python
+#!/usr/bin/env python
 
 # This script is to deal with haplotypes
 

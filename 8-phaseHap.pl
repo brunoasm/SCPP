@@ -1,7 +1,12 @@
+#!/usr/bin/env perl
 #phase haplotypes
 #need to install: GATK, picard-tools, SamTools
 #version 1.09 June 28 2013
 #Ke Bi-> kebi@berkeley.edu
+
+
+## Modified by B. Medeiros 22 Mar 2017
+## added shebang, updated call to picard
 
 use strict; 
 use warnings;
@@ -55,8 +60,8 @@ Note: folders do not end with "\/";
   my @bams = <$opts{b}/*sorted.bam>;  
   my $gatk = $opts{G}.'/GenomeAnalysisTK.jar';
   my $resultsDir = $opts{r}. "/";
-  my $AddOrReplace = $opts{p}.'/AddOrReplaceReadGroups.jar'; 
-  my $CreateSequenceDictionary = $opts{p}.'/CreateSequenceDictionary.jar';
+  my $AddOrReplace = $opts{p}.'/picard.jar AddOrReplaceReadGroups'; 
+  my $CreateSequenceDictionary = $opts{p}.'/picard.jar CreateSequenceDictionary';
    
   foreach my $bams  (@bams) {    
     my $ref = $ref_dir. $1 .'.fa' if basename($bams) =~ m/(\S+).sorted.bam/;
@@ -65,7 +70,7 @@ Note: folders do not end with "\/";
     my $index_ref = $ref_dir. $lib . '.dict';    
     system("java -jar $AddOrReplace INPUT=$bams OUTPUT=$resultsDir$lib.rg.bam RGID=$lib RGLB=exon_capture RGPL=illumina RGPU=lane3 RGSM=$lib");   
     system ("java -jar $CreateSequenceDictionary R=$ref O=$index_ref");    
-    system("samtools sort $resultsDir$lib.rg.bam $resultsDir$lib.rg.sort");    
+    system("samtools sort $resultsDir$lib.rg.bam -o $resultsDir$lib.rg.sort.bam");    
     system("samtools index $resultsDir$lib.rg.sort.bam");    
     system("java -Xmx8g -jar $gatk -T HaplotypeCaller -R $ref -I $resultsDir$lib.rg.sort.bam -o $resultsDir$lib.rg.vcf");    
     system("java -Xmx8g -jar $gatk -T ReadBackedPhasing -R $ref -I $resultsDir$lib.rg.sort.bam --variant $resultsDir$lib.rg.vcf --min_base_quality_score $opts{Q} -o $resultsDir$lib.raw.vcf");

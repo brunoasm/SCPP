@@ -1,4 +1,4 @@
-#!/usr/bin/home python
+#!/usr/bin/env python
 
 ########################################################################
 #                                                                      #
@@ -11,6 +11,11 @@
 #                                                                      #
 #     Script written by: Joshua Penalba (joshua.penalba@anu.edu.au)    #
 #     Written on: 13 Aug 2013           Last Modified: 3 Jan 2014      #
+#                                                                      #
+#                                                                      #
+#     Modified by B. Medeiros 22 Mar 2017                              #
+#     Changes:                                                         #
+#     updated samtools sort command                                      #
 #                                                                      #
 ########################################################################
 
@@ -89,7 +94,7 @@ for project in proj:
         os.system("samtools view -bS %starget_pair.sam > %starget_pair.bam" % (outdir, outdir))
         os.system("samtools view -bS %starget_solo.sam > %starget_solo.bam" % (outdir, outdir))
         os.system("samtools merge -f %starget.bam %starget_solo.bam %starget_pair.bam" % (outdir, outdir, outdir))
-        os.system("samtools sort %starget.bam %s" % (outdir,out))
+        os.system("samtools sort %starget.bam -o %s.bam" % (outdir,out))
         os.system("samtools index %s.bam" % out)
         if args.cov: os.system("samtools depth %s.bam > %s%s.cov" % (out, covpath, libname))
         else: pass
