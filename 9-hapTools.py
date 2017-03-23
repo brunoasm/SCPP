@@ -2,6 +2,8 @@
 
 # This script is to deal with haplotypes
 
+#Modification B. Medeiros 23 Mar 2017 - corrected a bug in consensus which saved result in the wrong folder and prevented removal of temporary files
+
 # SETTING UP ARGUMENT PARSING
 ###############################
 
@@ -145,12 +147,13 @@ if args.command == 'consensus':
             locfile.close()
             os.system('mafft %s.txt > %s.fa' % (locus, locus))
 
-#Finally makes the consensus files 
+#Finally makes the consensus files
+        os.chdir('../') #was saving files in the wrong place and unable to remove temporary files 
         conout = open(args.out+library+'.fa','w')
         conrep = open(args.out+library+'.out','w')
         for locus in mastlib[1]:
             mkey = 0
-            try: mfile = open(locus+'.fa', 'r')
+            try: mfile = open(library + '/' + locus+'.fa', 'r')
             except IOError: continue
             mseq = {}
             conseq = []
